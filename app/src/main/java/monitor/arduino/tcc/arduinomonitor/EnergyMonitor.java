@@ -10,6 +10,7 @@ public class EnergyMonitor {
     private String potenciaAparente;
     private String fatorDePotencia;
     private String energiaInstantanea;
+    private String hora;
 
     public EnergyMonitor (
             String tensao,
@@ -17,7 +18,8 @@ public class EnergyMonitor {
             String potenciaAtiva,
             String potenciaAparente,
             String fatorDePotencia,
-            String energiaInstantanea
+            String energiaInstantanea,
+            String hora
 
     ){
         this.tensao = tensao;
@@ -26,6 +28,7 @@ public class EnergyMonitor {
         this.potenciaAparente = potenciaAparente;
         this.fatorDePotencia = fatorDePotencia;
         this.energiaInstantanea = energiaInstantanea;
+        this.hora = hora;
 
     }
 
@@ -75,5 +78,13 @@ public class EnergyMonitor {
 
     public void setEnergiaInstantanea(String energiaInstantanea) {
         this.energiaInstantanea = energiaInstantanea;
+    }
+
+    public String getHora() {
+        return hora;
+    }
+
+    public void setHora(String hora) {
+        this.hora = hora;
     }
 }
