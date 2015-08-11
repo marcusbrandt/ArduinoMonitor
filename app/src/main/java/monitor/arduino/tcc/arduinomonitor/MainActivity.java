@@ -8,10 +8,14 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.Spinner;
 
 import com.github.mikephil.charting.charts.BarChart;
 import com.github.mikephil.charting.components.Legend;
@@ -38,10 +42,14 @@ import java.util.Locale;
 public class MainActivity extends AppCompatActivity implements OnChartValueSelectedListener{
     private static final String DEBUG_TAG = "HttpExample";
     ArrayList<EnergyMonitor> teams = new ArrayList<EnergyMonitor>();
-    ListView listview;
+    ArrayList<EnergyMonitor> daysEnergy = new ArrayList<EnergyMonitor>();
+    ArrayList<Date> datesSpinner = new ArrayList<Date>();
     Button btnDownload;
     BarChart mChart;
+    Spinner spinner;
     private Typeface mTf;
+    private ArrayList<ArrayList<EnergyMonitor>> days;
+    private ArrayList<String> spinnerDays = new ArrayList<String>();
 
 //    protected String[] mMonths = new String[] {
 //            "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"
@@ -59,6 +67,20 @@ public class MainActivity extends AppCompatActivity implements OnChartValueSelec
         } else {
             btnDownload.setEnabled(false);
         }
+
+        spinner = (Spinner) findViewById(R.id.spinner_days);
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                setData(days.get(position));
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
 
         mChart = (BarChart) findViewById(R.id.bar_chart);
         mChart.setOnChartValueSelectedListener(this);
@@ -120,6 +142,120 @@ public class MainActivity extends AppCompatActivity implements OnChartValueSelec
 
     }
 
+    public void buttonClickHandler(View view) {
+        new DownloadWebpageTask(new AsyncResult() {
+            @Override
+            public void onResult(JSONObject object) {
+                processJson(object);
+            }
+        }).execute("https://spreadsheets.google.com/tq?key=1g5t3auIznGoja909lVHAPC5xl1UwMZenoaWwZdfduUM");
+
+    }
+
+    private void processJson(JSONObject object) {
+        String tensao = null;
+        String corrente =  null;
+        String potenciaAtiva =  null;
+        String potenciaAparente =  null;
+        String fatorDePotencia =  null;
+        String energiaInstantanea = null;
+        String hora = null;
+
+        try {
+            JSONArray rows = object.getJSONArray("rows");
+
+            for (int r = 0; r < rows.length(); ++r) {
+                JSONObject row = rows.getJSONObject(r);
+                JSONArray columns = row.getJSONArray("c");
+
+
+                if (!columns.isNull(1) && !columns.isNull(2) && !columns.isNull(2)
+                        && !columns.isNull(3) && !columns.isNull(4) && !columns.isNull(5)
+                        && !columns.isNull(6)){
+                    tensao = columns.getJSONObject(1).getString("v");
+                    corrente = columns.getJSONObject(2).getString("v");
+                    potenciaAtiva = columns.getJSONObject(3).getString("v");
+                    potenciaAparente = columns.getJSONObject(4).getString("v");
+                    fatorDePotencia = columns.getJSONObject(5).getString("v");
+                    energiaInstantanea = columns.getJSONObject(6).getString("v");
+                    hora = columns.getJSONObject(0).getString("f");
+
+                    EnergyMonitor energyMonitor = new EnergyMonitor(tensao, corrente, potenciaAtiva, potenciaAparente, fatorDePotencia, energiaInstantanea, hora);
+                    teams.add(energyMonitor);
+                }
+
+            }
+
+            findDays(teams);
+
+            setData(days.get(0));
+
+
+
+//            final TeamsAdapter adapter = new TeamsAdapter(this, R.layout.team, teams);
+//            listview.setAdapter(adapter);
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    private void findDays(ArrayList<EnergyMonitor> energys){
+
+        days = new ArrayList<ArrayList<EnergyMonitor>>();
+        ArrayList<EnergyMonitor> auxDays = new ArrayList<EnergyMonitor>();
+        String data;
+
+
+        data = energys.get(0).getHora();
+
+        Date date = null;
+        try {
+            date = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss", Locale.US).parse(data);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        int dayAux = calendar.get(Calendar.DAY_OF_MONTH);
+        int dayActual;
+        spinnerDays.add(data);
+
+
+
+        for(EnergyMonitor energy:energys){
+
+            data = energy.getHora();
+            try {
+                date = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss", Locale.US).parse(data);
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+            calendar = Calendar.getInstance();
+            calendar.setTime(date);
+            dayActual = calendar.get(Calendar.DAY_OF_MONTH);
+
+            if(dayActual!=dayAux){
+
+                spinnerDays.add(data);
+                days.add(auxDays);
+                auxDays = new ArrayList<EnergyMonitor>();
+                dayAux = dayActual;
+            }
+
+            auxDays.add(energy);
+        }
+
+
+        ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_item, spinnerDays);
+        dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(dataAdapter);
+
+    }
+
+
     private void setData(ArrayList<EnergyMonitor> energyMonitors) {
         String tensaoS;
         String hora;
@@ -136,7 +272,7 @@ public class MainActivity extends AppCompatActivity implements OnChartValueSelec
             hora = energyMonitors.get(i).getHora();
             Date date = null;
             try {
-                 date = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss", Locale.US).parse(hora);
+                date = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss", Locale.US).parse(hora);
             } catch (ParseException e) {
                 e.printStackTrace();
             }
@@ -159,9 +295,9 @@ public class MainActivity extends AppCompatActivity implements OnChartValueSelec
             if(minutos!=minutosAux){
 
                 media=media/count;
-                Log.d("Brandt", tensaoS);
-                Log.d("Brandt", String.valueOf(date));
-                Log.d("Brandt", ""+minutos);
+//                Log.d("Brandt", tensaoS);
+//                Log.d("Brandt", String.valueOf(date));
+//                Log.d("Brandt", ""+minutos);
                 xVals.add("" + minutos);
                 yVals1.add(new BarEntry(media, i));
                 minutosAux = minutos;
@@ -186,54 +322,16 @@ public class MainActivity extends AppCompatActivity implements OnChartValueSelec
         mChart.setData(data);
     }
 
-    public void buttonClickHandler(View view) {
-        new DownloadWebpageTask(new AsyncResult() {
-            @Override
-            public void onResult(JSONObject object) {
-                processJson(object);
-            }
-        }).execute("https://spreadsheets.google.com/tq?key=1XvVQycX7L_Yg9d39dMxlDo_MQNyG--SklzW7nl_BQIc");
 
-    }
 
-    private void processJson(JSONObject object) {
-
-        try {
-            JSONArray rows = object.getJSONArray("rows");
-
-            for (int r = 0; r < rows.length(); ++r) {
-                JSONObject row = rows.getJSONObject(r);
-                JSONArray columns = row.getJSONArray("c");
-
-                String tensao = columns.getJSONObject(1).getString("v");
-                String corrente = columns.getJSONObject(2).getString("v");
-                String potenciaAtiva = columns.getJSONObject(3).getString("v");
-                String potenciaAparente = columns.getJSONObject(4).getString("v");
-                String fatorDePotencia = columns.getJSONObject(5).getString("v");
-                String energiaInstantanea = columns.getJSONObject(6).getString("v");
-                String hora = columns.getJSONObject(0).getString("f");
-
-                EnergyMonitor energyMonitor = new EnergyMonitor(tensao, corrente, potenciaAtiva, potenciaAparente, fatorDePotencia, energiaInstantanea, hora);
-                teams.add(energyMonitor);
-            }
-
-            setData(teams);
-
-//            final TeamsAdapter adapter = new TeamsAdapter(this, R.layout.team, teams);
-//            listview.setAdapter(adapter);
-
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-    }
 
     @Override
     public void onValueSelected(Entry e, int dataSetIndex, Highlight h) {
         if (e == null)
             return;
 
-        RectF bounds = mChart.getBarBounds((BarEntry) e);
-        PointF position = mChart.getPosition(e, YAxis.AxisDependency.LEFT);
+//        RectF bounds = mChart.getBarBounds((BarEntry) e);
+//        PointF position = mChart.getPosition(e, YAxis.AxisDependency.LEFT);
 //
 //        Log.i("bounds", bounds.toString());
 //        Log.i("position", position.toString());
