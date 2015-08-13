@@ -1,5 +1,6 @@
 package monitor.arduino.tcc.arduinomonitor;
 
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.graphics.PointF;
 import android.graphics.RectF;
@@ -49,7 +50,8 @@ public class MainActivity extends AppCompatActivity implements OnChartValueSelec
     Spinner spinner;
     private Typeface mTf;
     private ArrayList<ArrayList<EnergyMonitor>> days;
-    private ArrayList<String> spinnerDays = new ArrayList<String>();
+    private ArrayList<String> spinnerDays;
+    private ProgressDialog ringProgressDialog;
 
 //    protected String[] mMonths = new String[] {
 //            "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"
@@ -81,6 +83,10 @@ public class MainActivity extends AppCompatActivity implements OnChartValueSelec
             }
         });
 
+        ringProgressDialog = new ProgressDialog(MainActivity.this);
+        ringProgressDialog.setTitle("Por favor aguarde!");
+        ringProgressDialog.setMessage("Fazendo o download das informações...");
+        ringProgressDialog.setCancelable(false);
 
         mChart = (BarChart) findViewById(R.id.bar_chart);
         mChart.setOnChartValueSelectedListener(this);
@@ -143,6 +149,7 @@ public class MainActivity extends AppCompatActivity implements OnChartValueSelec
     }
 
     public void buttonClickHandler(View view) {
+        ringProgressDialog.show();
         new DownloadWebpageTask(new AsyncResult() {
             @Override
             public void onResult(JSONObject object) {
@@ -189,8 +196,7 @@ public class MainActivity extends AppCompatActivity implements OnChartValueSelec
             findDays(teams);
 
             setData(days.get(0));
-
-
+            ringProgressDialog.dismiss();
 
 //            final TeamsAdapter adapter = new TeamsAdapter(this, R.layout.team, teams);
 //            listview.setAdapter(adapter);
@@ -205,6 +211,7 @@ public class MainActivity extends AppCompatActivity implements OnChartValueSelec
 
         days = new ArrayList<ArrayList<EnergyMonitor>>();
         ArrayList<EnergyMonitor> auxDays = new ArrayList<EnergyMonitor>();
+        spinnerDays = new ArrayList<String>();
         String data;
 
 
@@ -220,7 +227,7 @@ public class MainActivity extends AppCompatActivity implements OnChartValueSelec
         calendar.setTime(date);
         int dayAux = calendar.get(Calendar.DAY_OF_MONTH);
         int dayActual;
-        spinnerDays.add(data);
+        spinnerDays.add(data.substring(0, 10));
 
 
 
@@ -237,16 +244,17 @@ public class MainActivity extends AppCompatActivity implements OnChartValueSelec
             dayActual = calendar.get(Calendar.DAY_OF_MONTH);
 
             if(dayActual!=dayAux){
-
-                spinnerDays.add(data);
                 days.add(auxDays);
                 auxDays = new ArrayList<EnergyMonitor>();
                 dayAux = dayActual;
+                spinnerDays.add(data.substring(0,10));
             }
+
 
             auxDays.add(energy);
         }
 
+        days.add(auxDays);
 
         ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(this,
                 android.R.layout.simple_spinner_item, spinnerDays);
@@ -257,7 +265,7 @@ public class MainActivity extends AppCompatActivity implements OnChartValueSelec
 
 
     private void setData(ArrayList<EnergyMonitor> energyMonitors) {
-        String tensaoS;
+        String dadoS;
         String hora;
         float media = 0.0f;
         int count = 0;
@@ -282,23 +290,20 @@ public class MainActivity extends AppCompatActivity implements OnChartValueSelec
 
 
 
-            tensaoS = energyMonitors.get(i).getTensao();
-            if(tensaoS.equals("$tensao$")) {
-                tensaoS = "0.0";
+            dadoS = energyMonitors.get(i).getEnergiaInstantanea();
+            if(dadoS.equals("$energiainst$")) {
+                dadoS = "0.0";
             }
 
-            float tensao = Float.valueOf(tensaoS);
+            float dado = Float.valueOf(dadoS);
 
             count++;
-            media+=tensao;
+            media+=dado;
 
             if(minutos!=minutosAux){
 
                 media=media/count;
-//                Log.d("Brandt", tensaoS);
-//                Log.d("Brandt", String.valueOf(date));
-//                Log.d("Brandt", ""+minutos);
-                xVals.add("" + minutos);
+                xVals.add(hora.substring(10,hora.length()-3));
                 yVals1.add(new BarEntry(media, i));
                 minutosAux = minutos;
                 count=0;
@@ -308,7 +313,7 @@ public class MainActivity extends AppCompatActivity implements OnChartValueSelec
 
         }
 
-        BarDataSet set1 = new BarDataSet(yVals1, "Minutos");
+        BarDataSet set1 = new BarDataSet(yVals1, "Energia Instantânea (HH:MM)");
         set1.setBarSpacePercent(35f);
 
         ArrayList<BarDataSet> dataSets = new ArrayList<BarDataSet>();
@@ -320,8 +325,8 @@ public class MainActivity extends AppCompatActivity implements OnChartValueSelec
         data.setValueTypeface(mTf);
 
         mChart.setData(data);
+        mChart.invalidate();
     }
-
 
 
 
