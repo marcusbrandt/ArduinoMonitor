@@ -9,9 +9,6 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 
-/**
- * Created by kstanoev on 1/14/2015.
- */
 public class TeamsAdapter extends ArrayAdapter<EnergyMonitor> {
 
     Context context;
@@ -39,12 +36,12 @@ public class TeamsAdapter extends ArrayAdapter<EnergyMonitor> {
             TextView losses = (TextView) v.findViewById(R.id.losses);
             TextView points = (TextView) v.findViewById(R.id.points);
 
-            pos.setText(String.valueOf(o.getTensao()));
-            name.setText(String.valueOf(o.getCorrente()));
-            wins.setText(String.valueOf(o.getPotenciaAtiva()));
-            draws.setText(String.valueOf(o.getPotenciaAparente()));
-            losses.setText(String.valueOf(o.getFatorDePotencia()));
-            points.setText(String.valueOf(o.getEnergiaInstantanea()));
+            pos.setText("Tensao: "+String.valueOf(o.getTensao())+" (V)");
+            name.setText("Corrente: "+String.valueOf(o.getCorrente())+" (A)");
+            wins.setText("Potencia Ativa: "+String.valueOf(o.getPotenciaAtiva())+" (W)");
+            draws.setText("Potencia Aparente: "+String.valueOf(o.getPotenciaAparente())+" (VA)");
+            losses.setText("Fator de Potencia: "+String.valueOf(o.getFatorDePotencia()));
+            points.setText("Energia Instantanea: "+String.valueOf(o.getEnergiaInstantanea())+" (W/s)");
         }
         return v;
     }

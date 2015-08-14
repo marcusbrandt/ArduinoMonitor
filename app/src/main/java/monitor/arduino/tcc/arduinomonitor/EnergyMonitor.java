@@ -1,9 +1,8 @@
 package monitor.arduino.tcc.arduinomonitor;
 
-/**
- * Created by kstanoev on 1/14/2015.
- */
-public class EnergyMonitor {
+import java.io.Serializable;
+
+public class EnergyMonitor implements Serializable {
     private String tensao;
     private String corrente;
     private String potenciaAtiva;
